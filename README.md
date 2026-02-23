@@ -4,8 +4,6 @@ Official codebase for [lettercaseconverter.org](https://lettercaseconverter.org/
 
 `Letter Case Converter` is a fast, browser-based text utility site focused on practical everyday text cleanup and transformation.
 
-[![CI](https://github.com/thanbaoky/lettercaseconverter.org/actions/workflows/ci.yml/badge.svg)](https://github.com/thanbaoky/lettercaseconverter.org/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/thanbaoky/lettercaseconverter.org/actions/workflows/codeql.yaml/badge.svg)](https://github.com/thanbaoky/lettercaseconverter.org/actions/workflows/codeql.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
 
 ## Quick Links
