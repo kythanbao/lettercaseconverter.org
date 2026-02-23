@@ -1,0 +1,117 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import SiteSearch from '~/components/widgets/SiteSearch.astro';
+import { headerData } from '~/navigation';
+import { getPermalink } from '~/utils/permalinks';
+
+interface SearchItem {
+  title: string;
+  url: string;
+  type: 'tool';
+  excerpt?: string;
+  keywords?: string;
+}
+
+const TOOL_PATH_PATTERN = /^\/(cleanup|text)\//;
+
+const navSections = headerData.links as Array<{
+  text?: string;
+  href?: string;
+  links?: Array<{ text?: string; href?: string }>;
+}>;
+
+const toolItems: SearchItem[] = navSections.flatMap((section) => {
+  if (!Array.isArray(section.links)) return [];
+
+  return section.links
+    .filter((item) => item.text && item.href && TOOL_PATH_PATTERN.test(item.href as string))
+    .map((item) => ({
+      title: item.text as string,
+      url: item.href as string,
+      type: 'tool' as const,
+      excerpt: `Tool in ${section.text || 'Tools'}`,
+      keywords: `${section.text || ''} ${item.text || ''}`.trim(),
+    }));
+});
+
+const staticItems: SearchItem[] = [
+  {
+    title: 'Editorial Policy and Content Quality',
+    url: getPermalink('/editorial-policy'),
+    type: 'tool',
+    excerpt: 'Editorial standards, QA workflow, and content governance.',
+    keywords: 'editorial policy content quality trust',
+  },
+  {
+    title: 'Trust Center',
+    url: getPermalink('/trust'),
+    type: 'tool',
+    excerpt: 'Testing standards, known limitations, and data-handling summary.',
+    keywords: 'trust center testing limitations data handling',
+  },
+  {
+    title: 'How We Test Tools',
+    url: getPermalink('/trust/how-we-test-tools'),
+    type: 'tool',
+    excerpt: 'Tool QA workflow and release quality checks.',
+    keywords: 'tool testing qa reference samples',
+  },
+  {
+    title: 'Known Limitations',
+    url: getPermalink('/trust/known-limitations'),
+    type: 'tool',
+    excerpt: 'Current limitations and boundaries for tool behavior.',
+    keywords: 'limitations constraints tool boundaries',
+  },
+  {
+    title: 'Data Handling Summary',
+    url: getPermalink('/trust/data-handling-summary'),
+    type: 'tool',
+    excerpt: 'Practical summary of privacy, cookies, analytics, and ads handling.',
+    keywords: 'privacy data handling cookies adsense',
+  },
+  {
+    title: 'Do Not Sell or Share',
+    url: getPermalink('/do-not-sell-or-share'),
+    type: 'tool',
+    excerpt: 'US privacy opt-out controls for sale/share and targeted advertising.',
+    keywords: 'do not sell share us privacy opt out',
+  },
+  {
+    title: 'US State Privacy Notice',
+    url: getPermalink('/us-privacy-notice'),
+    type: 'tool',
+    excerpt: 'US-specific privacy rights, categories, and request handling details.',
+    keywords: 'us privacy notice ccpa cpra rights',
+  },
+  {
+    title: 'Privacy Request Center',
+    url: getPermalink('/privacy-request'),
+    type: 'tool',
+    excerpt: 'Submit access, deletion, correction, and appeal requests.',
+    keywords: 'dsar privacy request access deletion correction appeal',
+  },
+];
+
+const seenUrls = new Set<string>();
+const searchItems = [...toolItems, ...staticItems].filter((item) => {
+  if (!item.url || seenUrls.has(item.url)) return false;
+  seenUrls.add(item.url);
+  return true;
+});
+
+const metadata = {
+  title: 'Search Tools',
+  description: 'Search available tools on Letter Case Converter.',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <SiteSearch id="site-search-widget" items={searchItems}>
+    <Fragment slot="title">Search</Fragment>
+    <Fragment slot="subtitle">
+      Find tools and key policy pages by name or keyword.
+    </Fragment>
+  </SiteSearch>
+</Layout>

@@ -1,0 +1,16 @@
+# Default ownership
+* @thanbaoky
+
+# CI / automation
+.github/workflows/* @thanbaoky
+
+# Core runtime
+src/middleware.ts @thanbaoky
+astro.config.ts @thanbaoky
+src/layouts/* @thanbaoky
+
+# Tool logic
+src/components/widgets/RemoveExtraSpaces.astro @thanbaoky
+src/components/widgets/ReverseTextGenerator.astro @thanbaoky
+src/pages/cleanup/remove-extra-spaces.astro @thanbaoky
+src/pages/text/reverse-text-generator.astro @thanbaoky

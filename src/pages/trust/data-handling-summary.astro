@@ -1,0 +1,61 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+
+const metadata = {
+  title: 'Data Handling Summary',
+  description:
+    'Practical summary of how tool inputs, AI requests, cookies, analytics, and advertising data are handled.',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <section class="px-4 py-12 sm:px-6 lg:py-16 mx-auto max-w-4xl prose prose-slate dark:prose-invert">
+    <h1>Data Handling Summary</h1>
+    <p>
+      This summary explains how data flows through the site at a practical level. It is a short operational companion
+      to the full <a href="/privacy">Privacy Policy</a>.
+    </p>
+
+    <h2>Local Tool Processing</h2>
+    <ul>
+      <li>Most tools run in-browser.</li>
+      <li>Input is processed locally for output generation.</li>
+      <li>No account is required for core tool usage.</li>
+    </ul>
+
+    <h2>AI Tool Processing</h2>
+    <ul>
+      <li>AI rewrite tools send submitted text to an AI provider to return a response.</li>
+      <li>Do not submit sensitive, confidential, legal, medical, or financial data.</li>
+      <li>AI output is for assistance and must be reviewed by humans.</li>
+    </ul>
+
+    <h2>Cookies, Analytics, and Ads</h2>
+    <ul>
+      <li>Cookies/local storage are used for site functionality and preference memory.</li>
+      <li>Analytics may collect aggregated usage and technical performance signals.</li>
+      <li>Ads may be served through Google AdSense and partner systems under their own policies.</li>
+    </ul>
+
+    <h2>Your Controls</h2>
+    <ul>
+      <li>
+        Review <a href="/cookie-policy">Cookie Policy</a> and update consent options via cookie settings.
+      </li>
+      <li>
+        US users can opt out at <a href="/do-not-sell-or-share">Do Not Sell or Share</a>.
+      </li>
+      <li>
+        Submit formal requests at <a href="/privacy-request">Privacy Request Center</a>.
+      </li>
+      <li>Use browser settings to block or clear cookies/local storage where supported.</li>
+      <li>Contact us at <strong>contact@lettercaseconverter.org</strong> for policy questions.</li>
+    </ul>
+
+    <p>
+      Related: <a href="/trust/how-we-test-tools">How We Test Tools</a>,{' '}
+      <a href="/trust/known-limitations">Known Limitations</a>, <a href="/editorial-policy">Editorial Policy</a>.
+    </p>
+  </section>
+</Layout>

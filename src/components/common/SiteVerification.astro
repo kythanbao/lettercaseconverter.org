@@ -1,0 +1,9 @@
+---
+import { SITE } from 'astrowind:config';
+
+const verificationToken = String(
+  process.env.PUBLIC_GOOGLE_SITE_VERIFICATION_ID || SITE.googleSiteVerificationId || ''
+).replace(/^\/+/, '');
+---
+
+{verificationToken && <meta name="google-site-verification" content={verificationToken} />}

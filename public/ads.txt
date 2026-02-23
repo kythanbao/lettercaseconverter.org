@@ -1,0 +1,2 @@
+# Configure your own AdSense publisher ID before production:
+# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

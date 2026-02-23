@@ -1,0 +1,236 @@
+---
+import Layout from '~/layouts/Layout.astro';
+import Header from '~/components/widgets/Header.astro';
+import Footer from '~/components/widgets/Footer.astro';
+import Announcement from '~/components/widgets/Announcement.astro';
+import ToolRetentionPanel from '~/components/widgets/ToolRetentionPanel.astro';
+import ToolGlobalUpgrade from '~/components/widgets/ToolGlobalUpgrade.astro';
+
+import { headerData, footerData } from '~/navigation';
+import type { MetaData } from '~/types';
+import { SITE, METADATA } from 'astrowind:config';
+import { getCanonical, getPermalink } from '~/utils/permalinks';
+import { findToolByPath } from '~/utils/tool-catalog';
+
+export interface Props {
+  metadata?: MetaData;
+  pageType?: 'home' | 'tool' | 'contact' | 'page';
+}
+
+const { metadata = {}, pageType = 'page' } = Astro.props;
+
+/* ================= SITE CONSTANTS ================= */
+const SITE_NAME = SITE?.name ?? 'Letter Case Converter';
+const SITE_URL = SITE?.site ?? 'https://lettercaseconverter.org';
+const SITE_EMAIL = 'contact@lettercaseconverter.org';
+const SITE_DESCRIPTION =
+  METADATA?.description ??
+  'Free online letter case converter and text tools to change case and clean text.';
+
+const currentPath = Astro.url.pathname;
+const canonicalUrl = String(metadata?.canonical || getCanonical(currentPath));
+const matchedTool = findToolByPath(currentPath);
+
+const inferredPageType: 'home' | 'tool' | 'contact' | 'page' =
+  currentPath === '/'
+    ? 'home'
+    : currentPath === '/contact'
+      ? 'contact'
+      : matchedTool
+        ? 'tool'
+        : 'page';
+
+const resolvedPageType = pageType !== 'page' ? pageType : inferredPageType;
+const isToolPage = resolvedPageType === 'tool' && Boolean(matchedTool);
+const resolvedTitle = metadata?.title || SITE_NAME;
+const resolvedDescription =
+  metadata?.description ||
+  (isToolPage
+    ? `${matchedTool?.name} is a free online browser-based tool on ${SITE_NAME}. Paste input, run transformation, and copy clean output.`
+    : SITE_DESCRIPTION);
+
+const effectiveMetadata: MetaData = {
+  ...metadata,
+  robots:
+    metadata?.robots ||
+    (isToolPage
+      ? {
+          index: true,
+          follow: true,
+        }
+      : undefined),
+  canonical: canonicalUrl,
+  description: resolvedDescription,
+  openGraph: {
+    ...(metadata?.openGraph || {}),
+    type: metadata?.openGraph?.type || (resolvedPageType === 'home' ? 'website' : 'article'),
+    url: metadata?.openGraph?.url || canonicalUrl,
+  },
+};
+
+/* ================= SCHEMA OBJECTS ================= */
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: SITE_NAME,
+  url: SITE_URL,
+  email: SITE_EMAIL,
+};
+
+const websiteSchema =
+  resolvedPageType === 'home'
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: SITE_NAME,
+        url: SITE_URL,
+        description: SITE_DESCRIPTION,
+        inLanguage: 'en',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${SITE_URL}/search?q={search_term_string}`,
+          'query-input': 'required name=search_term_string',
+        },
+      }
+    : null;
+
+const webApplicationSchema =
+  resolvedPageType === 'home'
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'WebApplication',
+        name: SITE_NAME,
+        url: SITE_URL,
+        applicationCategory: 'UtilityApplication',
+        operatingSystem: 'All',
+        browserRequirements: 'Requires JavaScript',
+        description: SITE_DESCRIPTION,
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+        },
+      }
+    : null;
+
+const softwareApplicationSchema =
+  isToolPage && matchedTool
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: matchedTool.name,
+        url: canonicalUrl,
+        applicationCategory: 'UtilityApplication',
+        operatingSystem: 'All',
+        description: resolvedDescription,
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+        },
+      }
+    : null;
+
+const contactPageSchema =
+  resolvedPageType === 'contact'
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'ContactPage',
+        name: `Contact ${SITE_NAME}`,
+        url: `${SITE_URL}/contact`,
+        mainEntity: {
+          '@type': 'ContactPoint',
+          contactType: 'customer support',
+          email: SITE_EMAIL,
+          availableLanguage: ['English'],
+        },
+      }
+    : null;
+
+const webPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: resolvedTitle,
+  url: canonicalUrl,
+  description: resolvedDescription,
+  isPartOf: {
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    url: SITE_URL,
+  },
+};
+
+const breadcrumbItems: Array<{ name: string; item: string }> = [
+  {
+    name: 'Home',
+    item: SITE_URL,
+  },
+];
+
+if (isToolPage && matchedTool) {
+  breadcrumbItems.push({ name: 'All Tools', item: String(getCanonical(getPermalink('/tools'))) });
+  breadcrumbItems.push({ name: matchedTool.name, item: canonicalUrl });
+} else if (currentPath !== '/') {
+  breadcrumbItems.push({ name: resolvedTitle, item: canonicalUrl });
+}
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: breadcrumbItems.map((crumb, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: crumb.name,
+    item: crumb.item,
+  })),
+};
+---
+
+<Layout metadata={effectiveMetadata}>
+  <!-- ================= JSON-LD SCHEMA ================= -->
+
+  <!-- Organization -->
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+
+  <!-- WebSite -->
+  {websiteSchema && <script is:inline type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />}
+
+  <!-- WebApplication -->
+  {webApplicationSchema && <script is:inline type="application/ld+json" set:html={JSON.stringify(webApplicationSchema)} />}
+
+  <!-- Tool Schema -->
+  {softwareApplicationSchema && (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(softwareApplicationSchema)} />
+  )}
+
+  <!-- ContactPage -->
+  {contactPageSchema && <script is:inline type="application/ld+json" set:html={JSON.stringify(contactPageSchema)} />}
+
+  <!-- WebPage -->
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(webPageSchema)} />
+
+  <!-- Breadcrumb -->
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+
+  <!-- ================= UI ================= -->
+
+  <slot name="announcement">
+    <Announcement />
+  </slot>
+
+  <slot name="header">
+    <Header {...headerData} showToggleTheme />
+  </slot>
+
+  <main id="main-content">
+    <slot />
+  </main>
+
+  {isToolPage && <ToolGlobalUpgrade />}
+
+  {isToolPage && matchedTool && <ToolRetentionPanel currentPath={currentPath} />}
+
+  <slot name="footer">
+    <Footer {...footerData} />
+  </slot>
+</Layout>

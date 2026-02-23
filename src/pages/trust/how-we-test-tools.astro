@@ -1,0 +1,59 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+
+const metadata = {
+  title: 'How We Test Tools',
+  description:
+    'Testing workflow for tool logic, reference samples, and release quality checks across all online utilities.',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <section class="px-4 py-12 sm:px-6 lg:py-16 mx-auto max-w-4xl prose prose-slate dark:prose-invert">
+    <h1>How We Test Tools</h1>
+    <p>
+      Each tool release follows a baseline quality workflow. The goal is to keep behavior deterministic where possible,
+      and clearly labeled where output is probabilistic or format-based.
+    </p>
+
+    <h2>1. Structure and Routing Checks</h2>
+    <ul>
+      <li>Every tool page must map route slug, widget mode, and guide slug consistently.</li>
+      <li>Each tool page must include Introduction, How It Works, and FAQ sections.</li>
+      <li>Each tool page must include a Reference Sample.</li>
+    </ul>
+
+    <h2>2. Runtime Handler Coverage</h2>
+    <ul>
+      <li>Mode-based tools are checked against config and runtime handler definitions.</li>
+      <li>Missing handler or missing config for any mode fails QA.</li>
+      <li>Build and Astro type checks run before release.</li>
+    </ul>
+
+    <h2>3. Reference Sample Policy</h2>
+    <ul>
+      <li>
+        <strong>Exact output</strong>: deterministic tools where expected output should match exactly.
+      </li>
+      <li>
+        <strong>Format output</strong>: tools with runtime/time/random/model variance.
+      </li>
+      <li>Reference examples are reviewed when input UX changes (for example, moving from line-config to selects).</li>
+    </ul>
+
+    <h2>4. Regression Process</h2>
+    <ol>
+      <li>Run tool QA audit for full page coverage.</li>
+      <li>Run Astro checks.</li>
+      <li>Run production build.</li>
+      <li>Review high-impact tools manually when behavior changes.</li>
+    </ol>
+
+    <p>
+      Related: <a href="/trust/known-limitations">Known Limitations</a>,{' '}
+      <a href="/trust/data-handling-summary">Data Handling Summary</a>,{' '}
+      <a href="/editorial-policy">Editorial Policy</a>.
+    </p>
+  </section>
+</Layout>

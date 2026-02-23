@@ -1,0 +1,382 @@
+---
+interface SearchItem {
+  title: string;
+  url: string;
+  type: 'tool';
+  excerpt?: string;
+  keywords?: string;
+}
+
+const {
+  id = 'site-search-widget',
+  items = [],
+  title = await Astro.slots.render('title'),
+  subtitle = await Astro.slots.render('subtitle'),
+} = Astro.props as {
+  id?: string;
+  items?: SearchItem[];
+  title?: string;
+  subtitle?: string;
+};
+---
+
+<section class="relative not-prose" {...id ? { id } : {}}>
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-12">
+    <div class="text-center pb-4 md:pb-8 max-w-4xl mx-auto">
+      {
+        title && (
+          <h1
+            class="text-3xl md:text-5xl font-bold leading-tighter tracking-tighter mb-4 font-heading dark:text-gray-200"
+            set:html={title}
+          />
+        )
+      }
+      {subtitle && <p class="text-l md:text-xl text-muted dark:text-slate-300" set:html={subtitle} />}
+    </div>
+
+    <div class="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <script is:inline type="application/json" data-search-index set:html={JSON.stringify(items)} />
+
+      <label class="sr-only" for="search-input">Search tools</label>
+      <input
+        id="search-input"
+        type="search"
+        placeholder="Search tools..."
+        class="w-full rounded-xl border border-slate-300 p-4 text-base focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+      />
+
+      <div class="mt-4 flex flex-wrap items-center gap-2" role="toolbar" aria-label="Search result filters">
+        <button type="button" data-type="all" class="search-pill is-active" aria-pressed="true">All</button>
+        <button type="button" data-type="tool" class="search-pill" aria-pressed="false">Tools</button>
+        <span class="ml-auto text-sm text-slate-500 dark:text-slate-400">
+          Results: <strong id="search-count" aria-live="polite">0</strong>
+        </span>
+      </div>
+
+      <div class="mt-3">
+        <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Popular searches</p>
+        <div id="search-popular" class="mt-2 flex flex-wrap gap-2"></div>
+      </div>
+
+      <p id="search-summary" class="mt-3 text-sm text-slate-600 dark:text-slate-400" role="status" aria-live="polite" aria-atomic="true">
+        Type to start searching.
+      </p>
+
+      <ul id="search-results" class="mt-4 grid gap-3 md:grid-cols-2"></ul>
+    </div>
+  </div>
+
+  <script is:inline>
+    function initSiteSearch() {
+      const root = document.getElementById('site-search-widget');
+      if (!root || root.dataset.initialized === 'true') return;
+      root.dataset.initialized = 'true';
+
+      const dataEl = root.querySelector('[data-search-index]');
+      const input = root.querySelector('#search-input');
+      const summaryEl = root.querySelector('#search-summary');
+      const countEl = root.querySelector('#search-count');
+      const resultEl = root.querySelector('#search-results');
+      const popularEl = root.querySelector('#search-popular');
+      const typeButtons = root.querySelectorAll('[data-type]');
+
+      if (!dataEl || !input || !summaryEl || !countEl || !resultEl || !popularEl) return;
+
+      let index = [];
+      try {
+        index = JSON.parse(dataEl.textContent || '[]');
+      } catch (_error) {
+        index = [];
+      }
+
+      const POPULAR_STORAGE_KEY = 'site-search-popular-v1';
+      const DEFAULT_POPULAR = [
+        'regex tester',
+        'text diff',
+        'html formatter',
+        'json formatter',
+        'keyword counter',
+        'meta description checker',
+        'case converter',
+        'base64 encoder',
+      ];
+
+      let activeType = 'all';
+
+      function normalizeText(value) {
+        return String(value || '')
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9\s-]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function tokenize(value) {
+        return normalizeText(value)
+          .split(' ')
+          .map((token) => token.trim())
+          .filter(Boolean);
+      }
+
+      function levenshtein(a, b) {
+        const aa = String(a || '');
+        const bb = String(b || '');
+        if (aa === bb) return 0;
+        if (!aa.length) return bb.length;
+        if (!bb.length) return aa.length;
+
+        const matrix = Array.from({ length: aa.length + 1 }, () => Array(bb.length + 1).fill(0));
+        for (let i = 0; i <= aa.length; i += 1) matrix[i][0] = i;
+        for (let j = 0; j <= bb.length; j += 1) matrix[0][j] = j;
+
+        for (let i = 1; i <= aa.length; i += 1) {
+          for (let j = 1; j <= bb.length; j += 1) {
+            const cost = aa[i - 1] === bb[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j - 1] + cost
+            );
+          }
+        }
+        return matrix[aa.length][bb.length];
+      }
+
+      function fuzzyTokenScore(queryToken, candidateTokens) {
+        let best = 0;
+        candidateTokens.forEach((token) => {
+          if (!token) return;
+          if (token === queryToken) {
+            best = Math.max(best, 6);
+            return;
+          }
+          if (token.startsWith(queryToken) || queryToken.startsWith(token)) {
+            best = Math.max(best, 4);
+            return;
+          }
+
+          const maxDistance = queryToken.length >= 6 ? 2 : 1;
+          const distance = levenshtein(queryToken, token);
+          if (distance <= maxDistance) {
+            best = Math.max(best, maxDistance === 2 ? 2.5 - distance : 2 - distance);
+          }
+        });
+        return best;
+      }
+
+      function getIntentBoost(query, itemType) {
+        const q = normalizeText(query);
+        const toolTerms = ['tool', 'converter', 'generator', 'formatter', 'validator', 'checker', 'tester', 'regex', 'diff'];
+        const toolMatch = toolTerms.some((term) => q.includes(term));
+        if (toolMatch) return itemType === 'tool' ? 4 : 0;
+        return 0;
+      }
+
+      function setActiveType(nextType) {
+        activeType = nextType;
+        typeButtons.forEach((node) => {
+          const isActive = (node.dataset.type || 'all') === activeType;
+          node.classList.toggle('is-active', isActive);
+          node.setAttribute('aria-pressed', String(isActive));
+        });
+      }
+
+      function getQueryScore(item, query) {
+        const q = normalizeText(query);
+        if (!q) return 0;
+
+        const title = normalizeText(item.title || '');
+        const keywords = normalizeText(item.keywords || '');
+        const excerpt = normalizeText(item.excerpt || '');
+        const haystack = `${title} ${keywords} ${excerpt}`.trim();
+        const queryTokens = tokenize(q);
+        const titleTokens = tokenize(title);
+        const keywordTokens = tokenize(keywords);
+        const haystackTokens = tokenize(haystack);
+
+        let score = 0;
+        if (title === q) score += 40;
+        if (title.startsWith(q)) score += 24;
+        if (title.includes(q)) score += 18;
+        if (keywords.includes(q)) score += 10;
+        if (excerpt.includes(q)) score += 4;
+
+        queryTokens.forEach((token) => {
+          score += fuzzyTokenScore(token, titleTokens) * 2.2;
+          score += fuzzyTokenScore(token, keywordTokens) * 1.5;
+          score += fuzzyTokenScore(token, haystackTokens) * 0.8;
+        });
+
+        score += getIntentBoost(query, item.type);
+        return score;
+      }
+
+      function readPopularMap() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(POPULAR_STORAGE_KEY) || '{}');
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (_error) {
+          return {};
+        }
+      }
+
+      function writePopularMap(map) {
+        try {
+          localStorage.setItem(POPULAR_STORAGE_KEY, JSON.stringify(map));
+        } catch (_error) {
+          // Ignore storage failures in private mode.
+        }
+      }
+
+      function trackPopularQuery(rawQuery) {
+        const query = normalizeText(rawQuery);
+        if (!query || query.length < 2) return;
+        const map = readPopularMap();
+        map[query] = (Number(map[query]) || 0) + 1;
+        writePopularMap(map);
+      }
+
+      function getPopularQueries() {
+        const map = readPopularMap();
+        const dynamic = Object.entries(map)
+          .sort((a, b) => Number(b[1]) - Number(a[1]) || String(a[0]).localeCompare(String(b[0])))
+          .slice(0, 8)
+          .map((entry) => String(entry[0]));
+        const combined = [...dynamic, ...DEFAULT_POPULAR];
+        return [...new Set(combined)].slice(0, 10);
+      }
+
+      function renderPopularQueries() {
+        const current = normalizeText(input.value || '');
+        popularEl.innerHTML = '';
+
+        getPopularQueries().forEach((query) => {
+          if (!query || query === current) return;
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className =
+            'rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300';
+          chip.textContent = query;
+          chip.addEventListener('click', () => {
+            input.value = query;
+            updateUrlQuery(query);
+            renderResults();
+          });
+          popularEl.append(chip);
+        });
+      }
+
+      function updateUrlQuery(value) {
+        const next = new URL(window.location.href);
+        if (value) {
+          next.searchParams.set('q', value);
+        } else {
+          next.searchParams.delete('q');
+        }
+        window.history.replaceState({}, '', `${next.pathname}${next.search}${next.hash}`);
+      }
+
+      function renderResults() {
+        const rawQuery = input.value.trim();
+        const query = normalizeText(rawQuery);
+
+        const filtered = index.filter((item) => {
+          const typeMatches = activeType === 'all' || item.type === activeType;
+          if (!typeMatches) return false;
+          if (!query) return true;
+          return getQueryScore(item, query) > 0;
+        });
+
+        const sorted = [...filtered].sort((a, b) => {
+          if (!query) {
+            if (a.type !== b.type) return a.type === 'tool' ? -1 : 1;
+            return a.title.localeCompare(b.title);
+          }
+          const scoreDiff = getQueryScore(b, query) - getQueryScore(a, query);
+          if (scoreDiff !== 0) return scoreDiff;
+          return a.title.localeCompare(b.title);
+        });
+
+        const display = sorted.slice(0, 24);
+        resultEl.innerHTML = '';
+
+        display.forEach((item) => {
+          const li = document.createElement('li');
+          li.className =
+            'rounded-xl border border-slate-200 bg-slate-50 p-4 hover:border-primary/50 hover:bg-white dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-900';
+
+          const link = document.createElement('a');
+          link.href = item.url;
+          link.className = 'block';
+
+          const meta = document.createElement('p');
+          meta.className = 'text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400';
+          meta.textContent = 'Tool';
+
+          const title = document.createElement('p');
+          title.className = 'mt-1 font-semibold text-slate-900 dark:text-slate-100';
+          title.textContent = item.title;
+
+          const excerpt = document.createElement('p');
+          excerpt.className = 'mt-1 text-sm text-slate-600 dark:text-slate-400';
+          excerpt.textContent = item.excerpt || item.url;
+
+          link.append(meta, title, excerpt);
+          li.append(link);
+          resultEl.append(li);
+        });
+
+        countEl.textContent = String(filtered.length);
+        renderPopularQueries();
+
+        if (!query && activeType === 'all') {
+          summaryEl.textContent = 'Showing all indexed tools.';
+        } else if (!query) {
+          summaryEl.textContent = `Showing all ${activeType} results.`;
+        } else {
+          summaryEl.textContent = `Query "${rawQuery}" matched ${filtered.length} result(s).`;
+        }
+      }
+
+      typeButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          setActiveType(btn.dataset.type || 'all');
+          renderResults();
+        });
+      });
+
+      const initialQuery = new URLSearchParams(window.location.search).get('q') || '';
+      if (initialQuery) input.value = initialQuery;
+      setActiveType(activeType);
+
+      input.addEventListener('input', () => {
+        updateUrlQuery(input.value.trim());
+        renderResults();
+      });
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          trackPopularQuery(input.value);
+          renderPopularQueries();
+        }
+      });
+
+      renderResults();
+    }
+
+    document.addEventListener('DOMContentLoaded', initSiteSearch);
+    document.addEventListener('astro:page-load', initSiteSearch);
+  </script>
+
+  <style>
+    .search-pill {
+      @apply rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300;
+    }
+
+    .search-pill.is-active {
+      @apply border-primary bg-primary text-white dark:text-white;
+    }
+  </style>
+</section>

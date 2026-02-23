@@ -1,0 +1,272 @@
+---
+---
+
+<script is:inline>
+  function initToolGlobalUpgrade() {
+    const key = `tool-global-state:${window.location.pathname}`;
+    if (document.body.dataset.toolGlobalUpgrade === key) return;
+    document.body.dataset.toolGlobalUpgrade = key;
+
+    const runSelectors =
+      '[data-action="run"],[data-ut2-action="run"],[data-ut3-action="run"],[data-action="compare"],[data-action="test"],[data-action="convert"]';
+    const secondarySelectors = '[data-action="secondary"]';
+    const processingSelectors = `${runSelectors},${secondarySelectors}`;
+    const clearSelectors = '[data-action="clear"],[data-ut2-action="clear"],[data-ut3-action="clear"]';
+
+    const isEditableField = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      if (el instanceof HTMLTextAreaElement) return !el.readOnly && !el.disabled;
+      if (el instanceof HTMLSelectElement) return !el.disabled;
+      if (el instanceof HTMLInputElement) return !el.disabled && el.type !== 'hidden' && el.type !== 'submit';
+      return false;
+    };
+
+    const getFieldId = (el, index) => {
+      if (el.id) return `id:${el.id}`;
+      const control = el.getAttribute('data-control') || el.getAttribute('data-ut2-control') || el.getAttribute('data-ut3-control');
+      if (control) return `control:${control}`;
+      if (el.getAttribute('name')) return `name:${el.getAttribute('name')}`;
+      return `index:${index}`;
+    };
+
+    const fields = Array.from(
+      document.querySelectorAll('textarea, input, select')
+    ).filter((el) => isEditableField(el));
+
+    const editableTextareas = fields.filter(
+      (field) => field instanceof HTMLTextAreaElement
+    );
+
+    const readState = () => {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (_error) {
+        return {};
+      }
+    };
+
+    const writeState = (state) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(state));
+      } catch (_error) {
+        // Ignore storage write failures.
+      }
+    };
+
+    const captureFieldValue = (el) => {
+      if (el instanceof HTMLInputElement) {
+        if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
+        return el.value;
+      }
+      if (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return el.value;
+      return null;
+    };
+
+    const applyFieldValue = (el, value) => {
+      if (value == null) return;
+      if (el instanceof HTMLInputElement) {
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          el.checked = Boolean(value);
+        } else {
+          el.value = String(value);
+        }
+      } else if (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+        el.value = String(value);
+      }
+    };
+
+    const saveFormState = () => {
+      const next = {};
+      fields.forEach((field, index) => {
+        const id = getFieldId(field, index);
+        next[id] = captureFieldValue(field);
+      });
+      writeState(next);
+    };
+
+    const restoreFormState = () => {
+      const state = readState();
+      let changed = false;
+      fields.forEach((field, index) => {
+        const id = getFieldId(field, index);
+        if (!(id in state)) return;
+        applyFieldValue(field, state[id]);
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+        changed = true;
+      });
+      return changed;
+    };
+
+    const findRunButton = () => document.querySelector(runSelectors);
+    const findSecondaryButton = () => document.querySelector(secondarySelectors);
+
+    const normalizeInputBeforeRun = () => {
+      editableTextareas.forEach((textarea) => {
+        const normalized = textarea.value.replace(/\r\n?/g, '\n');
+        if (normalized !== textarea.value) textarea.value = normalized;
+      });
+    };
+
+    const wirePersistence = () => {
+      fields.forEach((field) => {
+        field.addEventListener('input', saveFormState);
+        field.addEventListener('change', saveFormState);
+      });
+
+      document.querySelectorAll(clearSelectors).forEach((button) => {
+        button.addEventListener('click', () => {
+          try {
+            localStorage.removeItem(key);
+          } catch (_error) {
+            // Ignore storage failures.
+          }
+        });
+      });
+    };
+
+    const wireShortcut = () => {
+      document.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.key !== 'Enter') return;
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const isInputLike = target.matches('textarea, input, select');
+        if (!isInputLike) return;
+        event.preventDefault();
+        const secondary = event.shiftKey ? findSecondaryButton() : null;
+        const button = secondary || findRunButton();
+        if (!button) return;
+        button.click();
+      });
+    };
+
+    const findOutputTextarea = () => {
+      const candidates = Array.from(document.querySelectorAll('textarea[readonly]')).filter(
+        (node) => node instanceof HTMLTextAreaElement && !node.disabled
+      );
+      if (!candidates.length) return null;
+      return candidates.sort((a, b) => (b.value?.length || 0) - (a.value?.length || 0))[0];
+    };
+
+    const ensureOutputStats = (output) => {
+      const wrapper = output.parentElement;
+      if (!wrapper) return null;
+      let stats = wrapper.querySelector('[data-tool-output-stats]');
+      if (stats) return stats;
+      stats = document.createElement('p');
+      stats.setAttribute('data-tool-output-stats', '1');
+      stats.className = 'mt-2 text-xs text-slate-500 dark:text-slate-400';
+      output.insertAdjacentElement('afterend', stats);
+      return stats;
+    };
+
+    const formatOutputStats = (text) => {
+      const chars = text.length;
+      const words = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+      const lines = text ? text.split(/\r\n|\r|\n/).length : 0;
+      return { chars, words, lines };
+    };
+
+    const wireOutputStats = () => {
+      const output = findOutputTextarea();
+      if (!(output instanceof HTMLTextAreaElement)) return () => {};
+      const statsNode = ensureOutputStats(output);
+      if (!statsNode) return () => {};
+
+      const refresh = () => {
+        const stat = formatOutputStats(output.value || '');
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        statsNode.textContent = `Output: ${stat.chars} chars · ${stat.words} words · ${stat.lines} lines · updated ${hh}:${mm}:${ss}`;
+      };
+
+      refresh();
+      output.addEventListener('input', refresh);
+
+      document.addEventListener(
+        'click',
+        (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          if (!target.closest(`${processingSelectors},${clearSelectors}`)) return;
+          setTimeout(refresh, 0);
+          setTimeout(refresh, 150);
+          setTimeout(refresh, 350);
+        },
+        true
+      );
+
+      return refresh;
+    };
+
+    const wireInputNormalization = () => {
+      document.addEventListener(
+        'click',
+        (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          if (!target.closest(processingSelectors)) return;
+          normalizeInputBeforeRun();
+          saveFormState();
+        },
+        true
+      );
+    };
+
+    const wireDownloadButton = () => {
+      const output = findOutputTextarea();
+      if (!(output instanceof HTMLTextAreaElement)) return;
+
+      const copyButton =
+        document.querySelector('[data-action="copy-result"]') ||
+        document.querySelector('[data-action="copy"]') ||
+        document.querySelector('[data-ut2-action="copy"]') ||
+        document.querySelector('[data-ut3-action="copy"]');
+
+      if (!(copyButton instanceof HTMLElement)) return;
+      if (document.querySelector('[data-action="download"],[data-action="download-result"]')) return;
+      const parent = copyButton.parentElement;
+      if (!parent || parent.querySelector('[data-action="download-result"]')) return;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.action = 'download-result';
+      button.className =
+        'btn-primary ml-2 cursor-pointer flex items-center gap-2 bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200';
+      button.textContent = 'Download Result';
+      button.addEventListener('click', () => {
+        if (!output.value) return;
+        const blob = new Blob([output.value], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const slug = window.location.pathname.split('/').filter(Boolean).pop() || 'tool-result';
+        link.download = `${slug}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        const oldLabel = button.textContent;
+        button.textContent = 'Downloaded';
+        setTimeout(() => {
+          button.textContent = oldLabel || 'Download Result';
+        }, 1200);
+      });
+      parent.appendChild(button);
+    };
+
+    restoreFormState();
+    wirePersistence();
+    wireShortcut();
+    wireInputNormalization();
+    wireOutputStats();
+    wireDownloadButton();
+  }
+
+  document.addEventListener('DOMContentLoaded', initToolGlobalUpgrade);
+  document.addEventListener('astro:page-load', initToolGlobalUpgrade);
+</script>

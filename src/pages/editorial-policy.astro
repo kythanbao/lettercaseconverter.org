@@ -1,0 +1,82 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+
+const metadata = {
+  title: 'Editorial Policy and Content Quality',
+  description:
+    'How Letter Case Converter plans, reviews, updates, and governs tool pages for quality, trust, and search reliability.',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <section class="max-w-4xl mx-auto px-4 sm:px-6 py-10 md:py-14 prose prose-slate dark:prose-invert">
+    <h1>Editorial Policy and Content Quality</h1>
+    <p>
+      This page explains how we publish and maintain tool pages on Letter Case Converter. Our goal is
+      practical: help users solve text, formatting, and developer workflow tasks with clear instructions, predictable
+      outputs, and transparent limitations.
+    </p>
+
+    <h2>Editorial Mission</h2>
+    <p>
+      We publish content that is useful during real work, not filler content. Tool pages focus on input-output clarity,
+      reference samples, and boundary conditions.
+    </p>
+
+    <h2>Quality Standards</h2>
+    <ul>
+      <li>Every tool page must define expected behavior and include a reference sample.</li>
+      <li>Claims about features must be verifiable in the current tool implementation.</li>
+      <li>We avoid generic AI-generated filler and remove outdated or duplicate material.</li>
+      <li>We prioritize readability, clear headings, and consistent terminology.</li>
+    </ul>
+
+    <h2>Review Workflow</h2>
+    <ol>
+      <li>Draft: scope, user intent, and tool coverage are defined.</li>
+      <li>Technical review: examples are tested against live widget logic.</li>
+      <li>SEO review: metadata, canonical, internal links, and schema are validated.</li>
+      <li>Accessibility review: keyboard flow, labels, and live-region behavior are checked.</li>
+      <li>Publish and monitor: post-release checks and periodic refresh scheduling.</li>
+    </ol>
+
+    <h2>Technical SEO Governance</h2>
+    <ul>
+      <li>Canonical URLs are enforced per page.</li>
+      <li>Robots directives follow page intent (indexable guides, controlled utility pages when needed).</li>
+      <li>Structured data is used for organization, website, breadcrumbs, and tool page context.</li>
+      <li>Internal linking is maintained across active tools and trust/policy pages.</li>
+      <li>Topic clusters are updated when new tools or workflows are added.</li>
+    </ul>
+
+    <h2>Content Freshness and Updates</h2>
+    <p>
+      We review high-traffic pages and cluster pillar guides first. When tool behavior changes, we update reference
+      samples. Pages with mismatched examples are queued for correction in our QA backlog.
+    </p>
+
+    <h2>Trust and Advertising</h2>
+    <p>
+      Ads must not block core functionality or mislead users about tool behavior. Editorial decisions are independent of
+      ad placement. We do not publish sponsored tool rankings disguised as neutral documentation.
+    </p>
+    <p>
+      Supporting transparency pages are available in the <a href="/trust">Trust Center</a>, including{' '}
+      <a href="/trust/how-we-test-tools">How We Test Tools</a>, <a href="/trust/known-limitations">Known Limitations</a>,
+      and <a href="/trust/data-handling-summary">Data Handling Summary</a>.
+    </p>
+
+    <h2>Corrections Policy</h2>
+    <p>
+      If you find incorrect output examples, broken links, or outdated instructions, contact us via the contact page.
+      Confirmed issues are corrected in production and included in our next QA cycle.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      For editorial feedback and quality reports, visit <a href="/contact">Contact</a>. For data handling details, see
+      <a href="/privacy"> Privacy Policy</a> and <a href="/terms">Terms of Service</a>.
+    </p>
+  </section>
+</Layout>

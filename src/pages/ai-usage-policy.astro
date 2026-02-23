@@ -1,0 +1,27 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+
+const metadata = {
+  title: 'AI Usage Policy',
+  description:
+    'Rules and limitations for using the AI writing tools, including privacy, usage limits, and responsible use.',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <div class="max-w-3xl mx-auto py-12 px-4 prose">
+    <h1>AI Usage Policy</h1>
+
+    <p>This website provides AI-powered tools designed to assist users with rewriting individual sentences.</p>
+
+    <ul>
+      <li>AI tools are limited in usage.</li>
+      <li>User input is not stored or logged.</li>
+      <li>AI-generated content should be reviewed by humans.</li>
+      <li>This service is not intended for bulk content generation.</li>
+    </ul>
+
+    <p>By using AI tools on this website, you agree to these terms.</p>
+  </div>
+</Layout>

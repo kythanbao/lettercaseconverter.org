@@ -1,0 +1,135 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+
+export const metadata = {
+  title: 'About Letter Case Converter — Free Online Text Tools',
+  description: 'What Letter Case Converter is, who builds it, why it exists, and where the product is going next.',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <section class="relative not-prose">
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+      <div class="absolute inset-0 bg-blue-50 dark:bg-transparent"></div>
+    </div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6">
+      <div class="py-8 md:py-15">
+        <div class="text-center pb-8 max-w-4xl mx-auto">
+          <h1
+            class="text-3xl md:text-5xl font-bold leading-tighter tracking-tighter mb-4 font-heading dark:text-gray-200"
+          >
+            About Letter Case Converter
+          </h1>
+
+          <p class="text-l md:text-xl text-muted dark:text-slate-300">
+            A practical text-tool platform built to remove formatting friction from daily work.
+          </p>
+        </div>
+
+        <div class="max-w-4xl mx-auto">
+          <div
+            class="rounded-2xl border border-slate-200 bg-white
+            p-6 md:p-8 shadow-sm
+            dark:border-slate-800 dark:bg-slate-900
+            prose prose-slate dark:prose-invert
+            prose-h2:font-heading
+            prose-h2:text-3xl
+            prose-h2:mt-10 prose-h2:mb-4
+            prose-h3:font-heading
+            prose-h3:text-2xl
+            prose-h3:mt-8 prose-h3:mb-3
+            prose-p:text-base
+            prose-p:leading-relaxed
+            prose-ul:pl-5
+            prose-li:my-1
+            max-w-none"
+          >
+            <p>
+              <strong>Letter Case Converter</strong> is a utility website focused on one thing: making text operations fast,
+              clean, and reliable. People use it to fix casing and clean messy copy without installing desktop software.
+            </p>
+
+            <h2>Website Mission</h2>
+
+            <p>
+              Our mission is to reduce the "small but expensive" text problems that slow publishing, editing, SEO, and
+              development workflows. Most users do not need a heavy platform; they need focused tools that work
+              instantly and predictably.
+            </p>
+
+            <p>In practice, this mission means:</p>
+
+            <ul>
+              <li>Tools that open fast and solve one job clearly.</li>
+              <li>Output that is easy to copy into CMS, docs, spreadsheets, and code editors.</li>
+              <li>A privacy-conscious approach where most text tools run directly in the browser.</li>
+              <li>Continuous improvement based on real usage, not feature bloat.</li>
+            </ul>
+
+            <h2>Who Built This Website</h2>
+
+            <p>
+              Letter Case Converter is built and maintained by <strong>Ben Than</strong>, with support from lightweight
+              tooling and contributors around content and QA. The project is operated as an independent product, not as
+              a marketplace or agency service.
+            </p>
+
+            <p>
+              Why this matters: product decisions are made with a utility-first mindset. Features are added when they
+              remove real friction for users who work with text every day.
+            </p>
+
+            <h2>What We Actually Build</h2>
+
+            <ul>
+              <li>
+                <strong>Core text conversion</strong>: fast letter case conversion for daily writing and editing tasks.
+              </li>
+              <li>
+                <strong>Focused cleanup utilities</strong>: remove extra spaces and reverse text for practical text workflows.
+              </li>
+            </ul>
+
+            <h2>Development Goals</h2>
+
+            <p>Product development is guided by practical goals, not vanity metrics. Current priorities are:</p>
+
+            <ol>
+              <li>Increase reliability and consistency of output across all tools.</li>
+              <li>Improve internal linking between active tools and trust/policy pages.</li>
+              <li>Ship clearer tool documentation so users understand when and why to use each utility.</li>
+              <li>Expand the toolset only when quality and maintenance standards are met.</li>
+              <li>Keep the website lightweight while improving quality standards and UX clarity.</li>
+            </ol>
+
+            <h2>How We Work</h2>
+
+            <p>
+              We prioritize small, frequent improvements: bug fixes, clearer output logic, stronger policy pages, better
+              examples, and better connections between tools. This approach keeps the site useful for daily production
+              work instead of turning it into a generic feature catalog.
+            </p>
+
+            <h2>Contact</h2>
+
+            <p>
+              If you want to report an issue, suggest a tool, or propose a workflow improvement, contact us at
+              <strong>contact@lettercaseconverter.org</strong> or use the <a href="/contact">contact page</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    h2 {
+      margin-top: 16px;
+      margin-bottom: 12px;
+      font-size: larger;
+      font-weight: 700;
+    }
+  </style>
+</Layout>

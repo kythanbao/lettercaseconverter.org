@@ -1,0 +1,167 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import { headerData } from '~/navigation';
+
+interface NavItem {
+  text?: string;
+  href?: string;
+}
+
+interface NavSection {
+  text?: string;
+  href?: string;
+  links?: NavItem[];
+}
+
+const TOOL_PATH_PATTERN = /^\/(cleanup|text)\//;
+
+const toSectionId = (value?: string): string =>
+  (value || 'tools')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'tools';
+
+const sections = (headerData.links as NavSection[])
+  .filter((section) => Array.isArray(section.links) && section.links.length > 0)
+  .map((section) => {
+    const uniqueByHref = new Map<string, NavItem>();
+    for (const item of section.links || []) {
+      if (!item.href || !item.text) continue;
+      if (!TOOL_PATH_PATTERN.test(item.href)) continue;
+      uniqueByHref.set(item.href, item);
+    }
+    return {
+      title: section.text || 'Tools',
+      id: toSectionId(section.text || 'Tools'),
+      items: [...uniqueByHref.values()],
+    };
+  })
+  .filter((section) => section.items.length > 0);
+
+const allUnique = new Map<string, { text: string; href: string; section: string }>();
+for (const section of sections) {
+  for (const item of section.items) {
+    if (!item.href || !item.text) continue;
+    if (!allUnique.has(item.href)) {
+      allUnique.set(item.href, { text: item.text, href: item.href, section: section.title });
+    }
+  }
+}
+
+const toolCount = allUnique.size;
+
+const quickStartTools = [
+  '/cleanup/remove-extra-spaces',
+  '/text/reverse-text-generator',
+]
+  .map((href) => allUnique.get(href))
+  .filter(Boolean);
+
+const metadata = {
+  title: 'All Tools',
+  description: 'Browse all available tools in one place.',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-12 not-prose" data-tool-directory>
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 md:p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <h1 class="text-3xl md:text-5xl font-bold leading-tight tracking-tight dark:text-slate-100">All Tools</h1>
+      <p class="mt-3 text-slate-600 dark:text-slate-300">
+        Browse all available tools by category. Total tools: <strong>{toolCount}</strong>.
+      </p>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        This directory currently includes a minimal tool set.
+      </p>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        {
+          sections.map((section) => (
+            <a
+              href={`#${section.id}`}
+              class="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+            >
+              {section.title}
+            </a>
+          ))
+        }
+      </div>
+
+      <div class="mt-5">
+        <label for="tool-directory-search" class="sr-only">Filter tools</label>
+        <input
+          id="tool-directory-search"
+          type="search"
+          placeholder="Filter tools by name..."
+          class="w-full rounded-xl border border-slate-300 p-3 text-base focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+        />
+      </div>
+
+      <div class="mt-5 rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+        <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Quick Start</p>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Popular tools that are frequently used in daily workflows.</p>
+        <ul class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {quickStartTools.map((item) => (
+            <li>
+              <a
+                href={item?.href}
+                class="block rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:border-primary hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              >
+                {item?.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 lg:grid-cols-2">
+      {
+        sections.map((section) => (
+          <article id={section.id} class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div class="mb-3 flex items-center justify-between">
+              <h2 class="text-lg font-semibold dark:text-slate-100">{section.title}</h2>
+              <span class="text-sm text-slate-500 dark:text-slate-400">{section.items.length} tools</span>
+            </div>
+            <ul class="grid gap-2 sm:grid-cols-2">
+              {section.items.map((item) => (
+                <li data-tool-item data-tool-name={item.text?.toLowerCase()}>
+                  <a
+                    class="block rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300 dark:hover:text-primary"
+                    href={item.href}
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <script is:inline>
+    function initToolDirectory() {
+      const root = document.querySelector('[data-tool-directory]');
+      if (!root || root.dataset.bound === '1') return;
+      root.dataset.bound = '1';
+
+      const input = root.querySelector('#tool-directory-search');
+      const rows = root.querySelectorAll('[data-tool-item]');
+      if (!input || !rows.length) return;
+
+      input.addEventListener('input', () => {
+        const query = input.value.trim().toLowerCase();
+        rows.forEach((row) => {
+          const text = row.dataset.toolName || '';
+          row.classList.toggle('hidden', query ? !text.includes(query) : false);
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initToolDirectory);
+    document.addEventListener('astro:page-load', initToolDirectory);
+  </script>
+</Layout>

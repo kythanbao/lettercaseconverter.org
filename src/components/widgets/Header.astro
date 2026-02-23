@@ -1,0 +1,227 @@
+---
+import { Icon } from 'astro-icon/components';
+import Logo from '~/components/Logo.astro';
+import ToggleTheme from '~/components/common/ToggleTheme.astro';
+import ToggleMenu from '~/components/common/ToggleMenu.astro';
+// import Button from '~/components/ui/Button.astro';
+
+import { getHomePermalink, getPermalink } from '~/utils/permalinks';
+import { trimSlash } from '~/utils/permalinks';
+import type { CallToAction } from '~/types';
+
+interface Link {
+  text?: string;
+  href?: string;
+  ariaLabel?: string;
+  icon?: string;
+}
+
+interface MenuLink extends Link {
+  links?: Array<MenuLink>;
+}
+
+export interface Props {
+  id?: string;
+  links?: Array<MenuLink>;
+  actions?: Array<CallToAction>;
+  isSticky?: boolean;
+  isDark?: boolean;
+  isFullWidth?: boolean;
+  showToggleTheme?: boolean;
+  showRssFeed?: boolean;
+  position?: string;
+}
+
+const {
+  id = 'header',
+  links = [],
+  // actions = [],
+  isSticky = false,
+  isDark = false,
+  isFullWidth = false,
+  showToggleTheme = false,
+  position = 'center',
+} = Astro.props;
+
+const currentPath = `/${trimSlash(new URL(Astro.url).pathname)}`;
+const searchPath = getPermalink('/search');
+
+const TOOL_PATH_PATTERN = /^\/(cleanup|text)\//;
+
+const toSectionId = (value?: string): string =>
+  (value || 'tools')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'tools';
+---
+
+<header
+  class:list={[
+    { sticky: isSticky, relative: !isSticky, dark: isDark },
+    'top-0 z-40 flex-none mx-auto w-full border-b border-gray-50/0 transition-[opacity] ease-in-out',
+  ]}
+  {...isSticky ? { 'data-aw-sticky-header': true } : {}}
+  {...id ? { id } : {}}
+>
+  <div class="absolute inset-0"></div>
+  <div
+    class:list={[
+      'relative text-default py-2 px-3 lg:px-6 mx-auto w-full',
+      {
+        'lg:flex lg:justify-between': position !== 'center',
+      },
+      {
+        'lg:grid lg:grid-cols-3 lg:items-center': position === 'center',
+      },
+      {
+        'max-w-7xl': !isFullWidth,
+      },
+    ]}
+  >
+    <div class:list={[{ 'mr-auto rtl:mr-0 rtl:ml-auto': position === 'right' }, 'flex justify-between']}>
+      <a class="flex items-center" href={getHomePermalink()}>
+        <Logo />
+      </a>
+      <div class="flex items-center gap-1 lg:hidden">
+        <a
+          href={searchPath}
+          aria-label="Search"
+          class:list={[
+            'inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-200',
+            { 'border-primary text-primary dark:text-primary': searchPath === currentPath },
+          ]}
+        >
+          <Icon name="tabler:search" class="h-5 w-5" />
+        </a>
+        <ToggleMenu />
+      </div>
+    </div>
+    <nav
+      id="main-nav"
+      class="items-center w-full lg:w-auto hidden lg:flex lg:mx-5 text-default overflow-y-auto overflow-x-hidden lg:overflow-y-visible lg:overflow-x-auto lg:justify-self-center"
+      aria-label="Main navigation"
+    >
+      <ul
+        class="flex flex-col lg:flex-row lg:self-center w-full lg:w-auto text-xl lg:text-[0.9375rem] tracking-[0.01rem] font-medium lg:justify-center"
+      >
+        {
+          links.map(({ text, href, links: sublinks }, index) => {
+            const sublinksCount = sublinks?.length ?? 0;
+            const isToolSection = Boolean((sublinks || []).some((item) => item.href && TOOL_PATH_PATTERN.test(item.href)));
+            const maxVisibleLinks = isToolSection ? 10 : sublinksCount;
+            const visibleSublinks = (sublinks || []).slice(0, maxVisibleLinks);
+            const hasCollapsedLinks = isToolSection && sublinksCount > maxVisibleLinks;
+            const sectionId = toSectionId(text);
+            const viewAllLabel = text
+              ? text.toLowerCase().includes('tool')
+                ? `View all ${text}`
+                : `View all ${text} tools`
+              : 'View all tools';
+            const useFourColumns = visibleSublinks.length > 18;
+            const useSingleColumn = visibleSublinks.length <= 8;
+
+            return (
+            <li class={sublinks?.length ? 'dropdown' : ''}>
+              {sublinks?.length ? (
+                <>
+                  <button
+                    type="button"
+                    aria-haspopup="true"
+                    aria-controls={`submenu-${index}`}
+                    aria-expanded="false"
+                    class="hover:text-link dark:hover:text-white px-3 py-3 flex items-center whitespace-nowrap"
+                  >
+                    {text}{' '}
+                    <Icon name="tabler:chevron-down" class="w-3.5 h-3.5 ml-0.5 rtl:ml-0 rtl:mr-0.5 hidden lg:inline" />
+                  </button>
+                  <ul
+                    id={`submenu-${index}`}
+                    aria-hidden="true"
+                    class:list={[
+                      'dropdown-menu rounded pl-4 lg:pl-0 lg:hidden font-medium drop-shadow-xl',
+                      'lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:backdrop-blur-md dark:lg:bg-dark lg:bg-white/90',
+                      'lg:w-[min(92vw,980px)] lg:max-h-[70vh] lg:overflow-y-auto lg:p-3',
+                      'lg:gap-x-2 lg:gap-y-1',
+                      useSingleColumn ? 'lg:grid-cols-1 lg:w-[min(92vw,340px)]' : useFourColumns ? 'lg:grid-cols-4' : 'lg:grid-cols-3',
+                    ]}
+                  >
+                    {visibleSublinks.map(({ text: text2, href: href2 }) => (
+                      <li>
+                        <a
+                          class:list={[
+                            'first:rounded-t last:rounded-b lg:rounded-md lg:hover:bg-gray-100 hover:text-link dark:hover:text-white dark:hover:bg-gray-700 py-1 px-5 lg:px-3 block whitespace-normal',
+                            { 'aw-link-active': href2 === currentPath },
+                          ]}
+                          href={href2}
+                        >
+                          {text2}
+                        </a>
+                      </li>
+                    ))}
+                    {
+                      hasCollapsedLinks && (
+                        <li class="lg:col-span-full">
+                          <a
+                            class="first:rounded-t last:rounded-b lg:rounded-md lg:hover:bg-gray-100 hover:text-link dark:hover:text-white dark:hover:bg-gray-700 py-1 px-5 lg:px-3 block whitespace-normal font-semibold text-primary"
+                            href={`/tools#${sectionId}`}
+                          >
+                            {viewAllLabel} ({sublinksCount})
+                          </a>
+                        </li>
+                      )
+                    }
+                  </ul>
+                </>
+              ) : (
+                <a
+                  class:list={[
+                    'hover:text-link dark:hover:text-white px-3 py-3 flex items-center whitespace-nowrap',
+                    { 'aw-link-active': href === currentPath },
+                  ]}
+                  href={href}
+                >
+                  {text}
+                </a>
+              )}
+            </li>
+          );
+          })
+        }
+      </ul>
+    </nav>
+    <div
+      class:list={[
+        { 'ml-auto rtl:ml-0 rtl:mr-auto': position === 'left' },
+        'hidden lg:self-center lg:flex items-center lg:mb-0 fixed w-full lg:w-auto lg:static justify-end left-0 rtl:left-auto rtl:right-0 bottom-0 p-3 lg:p-0 lg:justify-self-end',
+      ]}
+    >
+      <div class="items-center flex justify-between w-full lg:w-auto">
+        <div class="flex items-center gap-2">
+          <a
+            href={searchPath}
+            class:list={[
+              'inline-flex items-center gap-1 rounded-full border border-slate-300 px-3 py-1.5 text-sm text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-200',
+              { 'border-primary text-primary dark:text-primary': searchPath === currentPath },
+            ]}
+          >
+            <Icon name="tabler:search" class="h-4 w-4" />
+            <span>Search</span>
+          </a>
+          {showToggleTheme && <ToggleTheme iconClass="w-6 h-6 lg:w-5 lg:h-5 lg:inline-block" />}
+        </div>
+      </div>
+
+      <!-- {
+          actions?.length ? (
+            <span class="ml-4 rtl:ml-0 rtl:mr-4">
+              {actions.map((btnProps) => (
+                <Button {...btnProps} class="ml-2 py-2.5 px-5.5 lg:px-6 font-semibold shadow-none text-sm w-auto" />
+              ))}
+            </span>
+          ) : (
+            ''
+          )
+        } -->
+    </div>
+  </div>
+</header>

@@ -1,0 +1,418 @@
+---
+interface Props {
+  gaId?: string;
+  adsClient?: string;
+}
+
+const { gaId = '', adsClient = '' } = Astro.props as Props;
+---
+
+<div
+  id="lcc-consent-banner"
+  class="fixed inset-x-3 bottom-3 z-[70] hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 md:inset-x-6"
+  role="dialog"
+  aria-live="polite"
+  aria-label="Cookie consent"
+>
+  <p class="text-sm text-slate-700 dark:text-slate-200">
+    We use analytics and AdSense cookies only with your consent. See
+    <a class="font-semibold underline" href="/privacy">Privacy Policy</a> and
+    <a class="font-semibold underline" href="/cookie-policy">Cookie Policy</a>.
+    US users can opt out at <a class="font-semibold underline" href="/do-not-sell-or-share">Do Not Sell or Share</a>.
+  </p>
+  <div class="mt-3 flex flex-wrap gap-2">
+    <button
+      type="button"
+      data-consent-action="accept-all"
+      class="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white"
+    >
+      Accept all
+    </button>
+    <button
+      type="button"
+      data-consent-action="reject-all"
+      class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:text-slate-200"
+    >
+      Reject non-essential
+    </button>
+    <button
+      type="button"
+      data-consent-action="open-preferences"
+      class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:text-slate-200"
+    >
+      Customize
+    </button>
+  </div>
+</div>
+
+<div
+  id="lcc-consent-panel"
+  class="fixed inset-x-3 bottom-3 z-[71] hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900 md:inset-x-auto md:right-6 md:w-[28rem]"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Cookie preferences"
+  tabindex="-1"
+>
+  <h2 class="text-base font-semibold text-slate-900 dark:text-white">Cookie preferences</h2>
+  <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+    Essential storage is always on. You can choose analytics and advertising preferences below.
+  </p>
+  <p id="lcc-gpc-note" class="mt-2 hidden rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+    Global Privacy Control (GPC) detected. Optional analytics and advertising are set to opt-out.
+  </p>
+  <p class="mt-2 text-xs text-slate-600 dark:text-slate-400">
+    For formal US privacy requests, visit <a class="underline" href="/privacy-request">Privacy Request Center</a>.
+  </p>
+
+  <div class="mt-4 space-y-3">
+    <label class="flex items-start justify-between gap-4">
+      <span>
+        <span class="block text-sm font-medium text-slate-900 dark:text-slate-100">Essential</span>
+        <span class="block text-xs text-slate-600 dark:text-slate-400">
+          Required for core site functionality.
+        </span>
+      </span>
+      <input type="checkbox" checked disabled class="mt-1 h-4 w-4" />
+    </label>
+
+    <label class="flex items-start justify-between gap-4">
+      <span>
+        <span class="block text-sm font-medium text-slate-900 dark:text-slate-100">Analytics</span>
+        <span class="block text-xs text-slate-600 dark:text-slate-400">
+          Helps us improve content and performance.
+        </span>
+      </span>
+      <input id="lcc-consent-analytics" type="checkbox" class="mt-1 h-4 w-4" />
+    </label>
+
+    <label class="flex items-start justify-between gap-4">
+      <span>
+        <span class="block text-sm font-medium text-slate-900 dark:text-slate-100">Advertising</span>
+        <span class="block text-xs text-slate-600 dark:text-slate-400">
+          Enables Google AdSense ad delivery and measurement.
+        </span>
+      </span>
+      <input id="lcc-consent-ads" type="checkbox" class="mt-1 h-4 w-4" />
+    </label>
+  </div>
+
+  <div class="mt-4 flex flex-wrap gap-2">
+    <button
+      type="button"
+      data-consent-action="save-preferences"
+      class="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white"
+    >
+      Save choices
+    </button>
+    <button
+      type="button"
+      data-consent-action="close-preferences"
+      class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:text-slate-200"
+    >
+      Cancel
+    </button>
+  </div>
+</div>
+
+<button
+  id="lcc-cookie-settings"
+  type="button"
+  data-consent-action="open-preferences"
+  class="fixed bottom-3 left-3 z-[69] rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+>
+  Cookie settings
+</button>
+
+<script is:inline define:vars={{ gaId, adsClient }}>
+  (() => {
+    if (window.__lccConsentInit) return;
+    window.__lccConsentInit = true;
+
+    const STORAGE_KEY = 'lcc-consent-v1';
+    const BANNER_ID = 'lcc-consent-banner';
+    const PANEL_ID = 'lcc-consent-panel';
+    const SETTINGS_BUTTON_ID = 'lcc-cookie-settings';
+    const GPC_NOTE_ID = 'lcc-gpc-note';
+
+    let gaConfigured = false;
+    let consentState = null;
+    let panelTriggerElement = null;
+    const gpcEnabled = (() => {
+      try {
+        return Boolean(navigator.globalPrivacyControl === true || window.globalPrivacyControl === true);
+      } catch (_error) {
+        return false;
+      }
+    })();
+
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      window.dataLayer.push(arguments);
+    }
+    window.gtag = window.gtag || gtag;
+
+    window.gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+      wait_for_update: 500,
+    });
+
+    const normalize = (value) => ({
+      analytics: Boolean(value?.analytics),
+      ads: Boolean(value?.ads),
+      ts: Number(value?.ts || Date.now()),
+      source: value?.source === 'gpc' ? 'gpc' : 'manual',
+    });
+
+    const enforcePrivacySignals = (value) => {
+      const normalized = normalize(value);
+      if (!gpcEnabled) return normalized;
+      return {
+        ...normalized,
+        analytics: false,
+        ads: false,
+        source: 'gpc',
+      };
+    };
+
+    const readConsent = () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return enforcePrivacySignals(JSON.parse(raw));
+      } catch (_error) {
+        return null;
+      }
+    };
+
+    const saveConsent = (consent) => {
+      const payload = enforcePrivacySignals(consent);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (_error) {
+        // Ignore storage failures and keep in-memory consent for current session.
+      }
+      return payload;
+    };
+
+    const loadScriptOnce = (id, src, attrs = {}) => {
+      if (!src || document.getElementById(id)) return;
+      const script = document.createElement('script');
+      script.id = id;
+      script.async = true;
+      script.src = src;
+      Object.entries(attrs).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          script.setAttribute(key, String(value));
+        }
+      });
+      document.head.appendChild(script);
+    };
+
+    const loadAnalytics = () => {
+      if (!gaId) return;
+      loadScriptOnce('lcc-ga-loader', `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaId)}`);
+      if (!gaConfigured) {
+        window.gtag('js', new Date());
+        window.gtag('config', gaId, { anonymize_ip: true });
+        gaConfigured = true;
+      }
+    };
+
+    const loadAdsense = () => {
+      if (!adsClient) return;
+      if (document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]')) return;
+      loadScriptOnce(
+        'lcc-adsense-loader',
+        `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(adsClient)}`,
+        { crossorigin: 'anonymous' }
+      );
+    };
+
+    const pushConsentUpdate = (consent) => {
+      window.gtag('consent', 'update', {
+        analytics_storage: consent.analytics ? 'granted' : 'denied',
+        ad_storage: consent.ads ? 'granted' : 'denied',
+        ad_user_data: consent.ads ? 'granted' : 'denied',
+        ad_personalization: consent.ads ? 'granted' : 'denied',
+      });
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adsbygoogle.requestNonPersonalizedAds = consent.ads ? 0 : 1;
+      window.adsbygoogle.pauseAdRequests = consent.ads ? 0 : 1;
+      window.__lccRestrictDataProcessing = !consent.ads;
+    };
+
+    const setUiState = (consent, options = {}) => {
+      const { keepPanelOpen = false } = options;
+      const banner = document.getElementById(BANNER_ID);
+      const panel = document.getElementById(PANEL_ID);
+      const analyticsToggle = document.getElementById('lcc-consent-analytics');
+      const adsToggle = document.getElementById('lcc-consent-ads');
+      const gpcNote = document.getElementById(GPC_NOTE_ID);
+      if (banner) {
+        banner.classList.toggle('hidden', Boolean(consent));
+      }
+      if (!keepPanelOpen && panel && !panel.classList.contains('hidden') && consent) {
+        panel.classList.add('hidden');
+      }
+      if (analyticsToggle) {
+        analyticsToggle.checked = Boolean(consent?.analytics);
+        analyticsToggle.disabled = gpcEnabled;
+      }
+      if (adsToggle) {
+        adsToggle.checked = Boolean(consent?.ads);
+        adsToggle.disabled = gpcEnabled;
+      }
+      if (gpcNote) {
+        gpcNote.classList.toggle('hidden', !gpcEnabled);
+      }
+    };
+
+    const getPanel = () => document.getElementById(PANEL_ID);
+
+    const isPanelOpen = () => {
+      const panel = getPanel();
+      return Boolean(panel && !panel.classList.contains('hidden'));
+    };
+
+    const getFocusableElements = (container) => {
+      if (!container) return [];
+      return Array.from(
+        container.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+    };
+
+    const applyConsent = (consent, persist = false) => {
+      const normalized = enforcePrivacySignals(consent);
+      consentState = persist ? saveConsent(normalized) : normalized;
+      pushConsentUpdate(consentState);
+      if (consentState.analytics) loadAnalytics();
+      if (consentState.ads) loadAdsense();
+      setUiState(consentState);
+      window.dispatchEvent(new CustomEvent('lcc:consent-updated', { detail: consentState }));
+    };
+
+    const openPreferences = () => {
+      panelTriggerElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const panel = document.getElementById(PANEL_ID);
+      if (panel) panel.classList.remove('hidden');
+      const banner = document.getElementById(BANNER_ID);
+      if (banner) banner.classList.add('hidden');
+      setUiState(consentState, { keepPanelOpen: true });
+
+      const focusables = getFocusableElements(panel);
+      if (focusables.length > 0) {
+        focusables[0].focus();
+      } else {
+        panel?.focus();
+      }
+    };
+
+    const closePreferences = () => {
+      const panel = document.getElementById(PANEL_ID);
+      if (panel) panel.classList.add('hidden');
+      if (!consentState) {
+        const banner = document.getElementById(BANNER_ID);
+        if (banner) banner.classList.remove('hidden');
+      }
+
+      const fallback = document.getElementById(SETTINGS_BUTTON_ID);
+      const restoreTarget =
+        panelTriggerElement && panelTriggerElement.isConnected ? panelTriggerElement : fallback instanceof HTMLElement ? fallback : null;
+      if (restoreTarget) {
+        restoreTarget.focus();
+      }
+    };
+
+    const handleAction = (action) => {
+      if (action === 'accept-all') {
+        applyConsent({ analytics: true, ads: true }, true);
+        return;
+      }
+      if (action === 'reject-all') {
+        applyConsent({ analytics: false, ads: false }, true);
+        return;
+      }
+      if (action === 'open-preferences') {
+        openPreferences();
+        return;
+      }
+      if (action === 'close-preferences') {
+        closePreferences();
+        return;
+      }
+      if (action === 'save-preferences') {
+        const analyticsToggle = document.getElementById('lcc-consent-analytics');
+        const adsToggle = document.getElementById('lcc-consent-ads');
+        applyConsent(
+          {
+            analytics: Boolean(analyticsToggle?.checked),
+            ads: Boolean(adsToggle?.checked),
+          },
+          true
+        );
+        closePreferences();
+      }
+    };
+
+    document.addEventListener('click', (event) => {
+      const element = event.target instanceof Element ? event.target.closest('[data-consent-action]') : null;
+      if (!element) return;
+      const action = element.getAttribute('data-consent-action');
+      if (action) handleAction(action);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (!isPanelOpen()) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closePreferences();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const panel = getPanel();
+      const focusables = getFocusableElements(panel);
+      if (focusables.length === 0) {
+        event.preventDefault();
+        panel?.focus();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+
+    const syncFromStorage = () => {
+      const stored = readConsent();
+      if (stored) {
+        applyConsent(stored, false);
+      } else {
+        if (gpcEnabled) {
+          applyConsent({ analytics: false, ads: false, source: 'gpc' }, false);
+        } else {
+          consentState = null;
+          setUiState(null);
+        }
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', syncFromStorage);
+    document.addEventListener('astro:after-swap', syncFromStorage);
+    syncFromStorage();
+  })();
+</script>

@@ -1,0 +1,56 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+
+const metadata = {
+  title: 'Known Limitations',
+  description: 'Current product limitations across formatting, parsing, regex, AI rewrite, and browser compatibility.',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <section class="px-4 py-12 sm:px-6 lg:py-16 mx-auto max-w-4xl prose prose-slate dark:prose-invert">
+    <h1>Known Limitations</h1>
+    <p>
+      Tools are built for speed and practicality. This page lists current boundaries so users can apply the right level
+      of review before using output in production workflows.
+    </p>
+
+    <h2>Parsing and Formatting Limits</h2>
+    <ul>
+      <li>Lite YAML/CSV/XML tools prioritize common patterns and may not support full edge-case specifications.</li>
+      <li>HTML/Markdown conversions are pragmatic and may need manual review for complex nested structures.</li>
+      <li>Delimiter and table conversions may require validation when quoted multiline cells are present.</li>
+    </ul>
+
+    <h2>Regex and Diff Limits</h2>
+    <ul>
+      <li>Regex behavior follows browser runtime; advanced engine differences can exist compared with server runtimes.</li>
+      <li>Basic diff tools optimize for clarity and speed, not full semantic move detection.</li>
+    </ul>
+
+    <h2>AI Rewrite Limits</h2>
+    <ul>
+      <li>AI output may be stylistically inconsistent or factually incomplete without context.</li>
+      <li>AI rewrite should be treated as draft output and requires human approval before publishing.</li>
+    </ul>
+
+    <h2>Runtime and Locale Limits</h2>
+    <ul>
+      <li>Some time/locale-dependent outputs can vary by browser locale, timezone, and runtime support.</li>
+      <li>Randomized tools and generators are non-deterministic by design.</li>
+    </ul>
+
+    <h2>What We Do About It</h2>
+    <ul>
+      <li>Mark non-deterministic tools with format-based reference policies.</li>
+      <li>Publish clear boundary notes in each tool guide.</li>
+      <li>Update references and handlers when input models change.</li>
+    </ul>
+
+    <p>
+      Related: <a href="/trust/how-we-test-tools">How We Test Tools</a>,{' '}
+      <a href="/trust/data-handling-summary">Data Handling Summary</a>.
+    </p>
+  </section>
+</Layout>

@@ -1,0 +1,167 @@
+---
+import { Icon } from 'astro-icon/components';
+
+const {
+  title = await Astro.slots.render('title'),
+  subtitle = await Astro.slots.render('subtitle'),
+  id,
+  bg = await Astro.slots.render('bg'),
+} = Astro.props;
+---
+
+<section class="relative not-prose" {...id ? { id } : {}}>
+  <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+    <slot name="bg">
+      {bg ? <Fragment set:html={bg} /> : null}
+    </slot>
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="py-8 md:py-15">
+      <!-- HEADER -->
+      <div class="text-center pb-4 md:pb-8 max-w-7xl mx-auto">
+        {
+          title && (
+            <h1
+              class="text-3xl md:text-5xl font-bold leading-tighter tracking-tighter mb-4 font-heading dark:text-gray-200"
+              set:html={title}
+            />
+          )
+        }
+
+        {subtitle && <p class="text-l md:text-xl text-muted dark:text-slate-300" set:html={subtitle} />}
+      </div>
+
+      <!-- TOOL BODY -->
+      <div class="max-w-7xl mx-auto">
+        <div
+          class="rounded-2xl border border-slate-200 bg-white p-2 md:p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        >
+          <!-- INPUT -->
+          <label class="sr-only" for="res-input">Text to clean</label>
+          <textarea
+            id="res-input"
+            placeholder="Paste or type your text here…"
+            class="w-full min-h-[160px] resize-y rounded-lg border border-slate-300 p-4 focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+          ></textarea>
+
+          <!-- COUNTERS -->
+          <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
+            <span>Character Count: <strong id="res-chars">0</strong></span>
+            <span>Word Count: <strong id="res-words">0</strong></span>
+            <span>Sentence Count: <strong id="res-sentences">0</strong></span>
+            <span>Line Count: <strong id="res-lines">0</strong></span>
+          </div>
+
+          <!-- ACTION BUTTONS -->
+          <div class="mt-4 flex flex-row flex-wrap gap-3">
+            <button class="cc-btn btn-primary" data-action="remove"> Remove Extra Spaces </button>
+
+            <button
+              class="cc-btn btn-primary bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200"
+              data-action="clear"
+            >
+              Clear
+            </button>
+          </div>
+
+          <!-- OUTPUT -->
+          <div class="mt-6">
+            <label class="mb-2 block text-sm font-medium" for="res-output">Result</label>
+            <textarea
+              id="res-output"
+              readonly
+              class="w-full min-h-[140px] rounded-lg border border-slate-300 bg-slate-100 p-4 dark:border-slate-700 dark:bg-slate-800"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- COPY BUTTON -->
+        <div class="mt-3 flex justify-center">
+          <button type="button" class="btn-primary cursor-pointer flex items-center gap-2" data-action="copy">
+            <span class="js-text">Copy Result</span>
+            <Icon name="tabler:copy" class="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script is:inline>
+    function initTool() {
+      const root = document.getElementById('remove-extra-spaces');
+      if (!root) return;
+
+      if (root.dataset.initialized === 'true') return;
+      root.dataset.initialized = 'true';
+
+      const input = document.getElementById('res-input');
+      const output = document.getElementById('res-output');
+
+      const charsEl = document.getElementById('res-chars');
+      const wordsEl = document.getElementById('res-words');
+      const sentencesEl = document.getElementById('res-sentences');
+      const linesEl = document.getElementById('res-lines');
+
+      function updateCounters(text) {
+        const characters = text.length;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const sentences = text.trim() ? text.split(/[.!?]+/).filter(Boolean).length : 0;
+        const lines = text ? text.split(/\r\n|\r|\n/).length : 0;
+
+        charsEl.textContent = characters;
+        wordsEl.textContent = words;
+        sentencesEl.textContent = sentences;
+        linesEl.textContent = lines;
+      }
+
+      function removeExtraSpaces(text) {
+        return text
+          .replace(/[ \t]+/g, ' ') // collapse multiple spaces
+          .replace(/\s*\n\s*/g, '\n') // trim spaces around line breaks
+          .trim();
+      }
+
+      input.addEventListener('input', () => {
+        updateCounters(input.value);
+      });
+
+      document.querySelectorAll('[data-action]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const action = btn.dataset.action;
+
+          switch (action) {
+            case 'remove':
+              output.value = removeExtraSpaces(input.value);
+              updateCounters(output.value);
+              break;
+
+            case 'copy':
+              if (!output.value) return;
+              await navigator.clipboard.writeText(output.value);
+              btn.querySelector('.js-text').textContent = 'Copied!';
+              setTimeout(() => {
+                btn.querySelector('.js-text').textContent = 'Copy Result';
+              }, 1200);
+              break;
+
+            case 'clear':
+              input.value = '';
+              output.value = '';
+              updateCounters('');
+              break;
+          }
+        });
+      });
+    }
+    document.addEventListener('DOMContentLoaded', initTool);
+    document.addEventListener('astro:page-load', initTool);
+  </script>
+
+  <style>
+    .cc-btn {
+      @apply rounded-lg p-1;
+    }
+  </style>
+</section>
